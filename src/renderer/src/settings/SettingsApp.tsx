@@ -263,8 +263,9 @@ export function SettingsApp(): React.JSX.Element | null {
         </footer>
 
         <p className="quit-hint">
-          Closing this window keeps the timer running in the background. To stop
-          Breakwise completely, run <code>pkill breakwise</code> in a terminal.
+          Closing this window keeps the countdown running — reopening it never
+          resets the timer. Use the tray icon in the top bar to pause, restart,
+          or quit Breakwise.
         </p>
       </main>
     </div>

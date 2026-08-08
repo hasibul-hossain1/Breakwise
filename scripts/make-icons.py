@@ -57,6 +57,25 @@ def app_icon(size=512):
     return f"icon.png ({size}x{size})"
 
 
+def tray_icon(size):
+    """Light monochrome mark for the (dark) GNOME top bar."""
+    s = size * SS
+    icon = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    d = ImageDraw.Draw(icon)
+
+    inset = int(s * 0.12)
+    _ring(d, [inset, inset, s - inset, s - inset], width=max(SS, int(s * 0.11)), fill=(255, 255, 255, 240))
+
+    r = max(SS, int(s * 0.075))
+    c = s // 2
+    d.ellipse([c - r, c - r, c + r, c + r], fill=(255, 255, 255, 240))
+
+    name = "tray.png" if size == 32 else f"tray@{size // 32}x.png"
+    icon.resize((size, size), Image.LANCZOS).save(OUT / name)
+    return f"{name} ({size}x{size})"
+
+
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
-    print("wrote", app_icon(512))
+    for line in [app_icon(512), tray_icon(32), tray_icon(64)]:
+        print("wrote", line)

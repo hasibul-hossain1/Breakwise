@@ -68,15 +68,20 @@ The AppImage needs no install — mark it executable and run it.
 
 ## Using it
 
-Launching the app opens the settings window and **restarts both countdowns**
-from a full interval. Launching it again while it is already running does the
-same thing — it raises the existing window rather than starting a second copy.
+Launching the app opens the settings window. If it is already running, that
+raises the existing window instead of starting a second copy — and it
+**never resets a running countdown**. Use **Restart countdown**, in the tray
+menu or next to the timers in settings, when you actually want to reset it.
 
-There is deliberately **no tray icon and no desktop notifications**. The only
-things this app ever puts on screen are the settings window and the break card.
+The app lives in the system tray. From the tray menu you can see the countdown
+to each break, take a break immediately, restart the countdown, pause
+reminders, reopen settings, or quit.
+
+There are deliberately **no desktop notifications**. The only things this app
+puts on screen are the settings window and the break card.
 
 Closing the settings window does **not** quit the app — the countdown keeps
-running in the background, which is the point. To stop it completely:
+running, which is the point. Quit from the tray menu, or:
 
 ```bash
 pkill breakwise

@@ -1,7 +1,8 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
-import type { AppConfig, BreakKind } from '@shared/types'
+import type { AppConfig, BreakKind, StatusPayload } from '@shared/types'
 import { configStore } from './config'
 import { BreakScheduler } from './scheduler'
+import { AppTray } from './tray'
 import { setAutostart } from './autostart'
 import {
   createOverlayWindow,
@@ -20,6 +21,7 @@ const LAUNCHED_BY_AUTOSTART = process.argv.includes('--autostart')
 
 let overlay: BrowserWindow | null = null
 let scheduler: BreakScheduler | null = null
+let tray: AppTray | null = null
 let quitting = false
 
 /** Lifecycle tracing, dev builds only — silent once packaged. */
@@ -29,6 +31,11 @@ function debug(...args: unknown[]): void {
 
 function broadcast(channel: string, payload: unknown): void {
   getSettingsWindow()?.webContents.send(channel, payload)
+}
+
+function handleStatus(status: StatusPayload): void {
+  tray?.update(status)
+  broadcast('status:changed', status)
 }
 
 function applyConfig(config: AppConfig): void {
@@ -76,13 +83,25 @@ function bootstrap(): void {
     }, 320)
   })
 
-  scheduler.on('status', (status) => broadcast('status:changed', status))
+  scheduler.on('status', handleStatus)
+
+  tray = new AppTray({
+    openSettings: () => openSettingsWindow(),
+    takeBreak: (kind) => scheduler?.triggerBreak(kind),
+    setPaused: (paused) => scheduler?.setPaused(paused),
+    restartTimers: () => scheduler?.restart(),
+    quit: () => {
+      quitting = true
+      app.quit()
+    }
+  })
 
   configStore.onChange(applyConfig)
   registerIpc()
 
   setAutostart(config.autostart)
   scheduler.start()
+  tray.update(scheduler.getStatus())
 
   if (LAUNCHED_BY_AUTOSTART) {
     debug('started silently for autostart; countdown running')
@@ -92,16 +111,16 @@ function bootstrap(): void {
   }
 }
 
-// A second launch should surface settings and restart the countdown rather
-// than start a rival instance.
+// A second launch surfaces settings rather than starting a rival instance.
+// It deliberately does NOT restart the countdown: once the timer is running,
+// opening settings to look at it must not throw away the progress. Use
+// "Restart countdown" in the tray or settings to reset it on purpose.
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
   app.on('second-instance', () => {
-    debug('second launch: before restart', scheduler?.getStatus())
-    scheduler?.restart()
     openSettingsWindow()
-    debug('second launch: after restart', scheduler?.getStatus())
+    debug('second launch: settings raised, countdown untouched', scheduler?.getStatus())
   })
 
   app.whenReady().then(() => {
@@ -110,7 +129,7 @@ if (!app.requestSingleInstanceLock()) {
   })
 }
 
-// There is no tray: closing the settings window must leave the timer running.
+// This is a tray app: closing the settings window must not exit it.
 app.on('window-all-closed', () => {
   if (quitting) app.quit()
 })
@@ -118,4 +137,5 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   quitting = true
   scheduler?.stop()
+  tray?.destroy()
 })
