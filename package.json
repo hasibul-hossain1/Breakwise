@@ -9,7 +9,7 @@
   "homepage": "https://github.com/shanto/breakwise",
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "build": "electron-vite build && node scripts/verify-build.mjs",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "dist:deb": "npm run build && electron-builder --linux deb",
@@ -23,6 +23,7 @@
     "electron": "^33.3.0",
     "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",
+    "lottie-react": "^2.4.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "typescript": "^5.7.2",

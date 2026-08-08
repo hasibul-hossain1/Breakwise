@@ -157,9 +157,41 @@ python3 scripts/make-icons.py
 ```
 
 ```bash
+node scripts/make-animations.mjs
+```
+
+```bash
 npx electron scripts/capture.cjs
 ```
 
 The first regenerates the app and tray icons into `resources/`. The second
-renders the windows to `shots/` with stubbed data — handy for reviewing UI
-changes without waiting for a real break.
+regenerates the break-card animations. The third renders the windows to
+`shots/` with stubbed data — handy for reviewing UI changes without waiting
+for a real break.
+
+## The break-card animations
+
+Each break card plays a Lottie animation: a walking figure for the body break,
+and a head turning from the screen to the horizon for the eye break. They are
+**generated**, not hand-written — Lottie JSON is far too verbose to edit by
+hand — so the source of truth is `scripts/make-animations.mjs`. Swing angles
+and cycle length are constants at the top of each function; change them and
+re-run the script.
+
+To use a professionally made animation instead, download the JSON (animations
+in the public [LottieFiles](https://lottiefiles.com/) library are covered by
+the Lottie Simple License, which permits commercial use without attribution)
+and overwrite `src/renderer/src/animations/body-walk.json` or `eye-look.json`.
+Keep the canvas at 100x100 and nothing else needs to change.
+
+This is what makes `lottie-web` the largest thing in the bundle — the break
+window's chunk is ~690 kB because of it. If you end up keeping the generated
+pictograms, plain inline SVG would do the same job for a fraction of that.
+
+## A note on build verification
+
+`npm run build` ends by running `scripts/verify-build.mjs`, which fails if any
+file in `out/` is empty. This exists because a build once emitted zero-byte JS
+and CSS chunks while still printing the correct sizes to stdout. The app
+launched, the tray appeared, the timers ran — and every window rendered blank.
+Nothing in the normal output revealed it, so the check is now mandatory.

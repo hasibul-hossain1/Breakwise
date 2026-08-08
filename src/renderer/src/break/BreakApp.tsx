@@ -2,13 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { BreakPayload } from '@shared/types'
 import { BREAK_COPY } from '@shared/types'
 import { formatDuration } from '@shared/defaults'
-import { ProgressRing } from '../components/ProgressRing'
+import { BreakAnimation } from '../components/BreakAnimation'
 
 /**
- * 100 ms is fast enough that the ring reads as continuous (helped by a CSS
- * transition) while re-rendering 10x per second instead of 60x.
+ * 100 ms is fast enough that the progress bar reads as continuous (helped by a
+ * CSS transition) while re-rendering 10x per second instead of 60x.
  */
 const TICK_MS = 100
+
+const ART_SIZE = 72
 
 export function BreakApp(): React.JSX.Element | null {
   const [payload, setPayload] = useState<BreakPayload | null>(null)
@@ -46,39 +48,43 @@ export function BreakApp(): React.JSX.Element | null {
     if (!payload) return 0
     const total = payload.durationSeconds * 1000
     if (total <= 0) return 1
-    return 1 - remainingMs / total
+    return Math.min(1, Math.max(0, 1 - remainingMs / total))
   }, [payload, remainingMs])
 
   if (!payload) return null
 
   const copy = BREAK_COPY[payload.kind]
-  const seconds = remainingMs / 1000
-  const readout = formatDuration(seconds)
 
   return (
     <div className={`card kind-${payload.kind}${leaving ? ' leaving' : ''}`}>
-      <ProgressRing progress={progress} size={62} stroke={4}>
-        <span className={`readout${readout.length > 3 ? ' readout-compact' : ''}`}>
-          {readout}
-        </span>
-      </ProgressRing>
+      <BreakAnimation kind={payload.kind} size={ART_SIZE} />
 
       <div className="copy">
-        <div className="label">{copy.label}</div>
+        <div className="label-row">
+          <span className="label">{copy.label}</span>
+          {payload.allowSkip && (
+            <button
+              type="button"
+              className="skip"
+              onClick={() => window.breakwise.skipBreak()}
+              title="End this break early"
+            >
+              Skip
+            </button>
+          )}
+        </div>
+
         <div className="headline">{copy.headline}</div>
-        <div className="detail">{copy.detail}</div>
+
+        <div className="meta">
+          <span className="detail">{copy.detail}</span>
+          <span className="readout">{formatDuration(remainingMs / 1000)}</span>
+        </div>
       </div>
 
-      {payload.allowSkip && (
-        <button
-          type="button"
-          className="skip"
-          onClick={() => window.breakwise.skipBreak()}
-          title="End this break early"
-        >
-          Skip
-        </button>
-      )}
+      <div className="progress">
+        <div className="progress-fill" style={{ transform: `scaleX(${progress})` }} />
+      </div>
     </div>
   )
 }
