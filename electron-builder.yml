@@ -1,0 +1,52 @@
+appId: dev.shanto.breakwise
+productName: Breakwise
+copyright: Copyright © 2026 shanto
+
+directories:
+  output: dist
+  buildResources: resources
+
+files:
+  - out/**
+  - package.json
+
+linux:
+  target:
+    - deb
+    - AppImage
+  category: Utility
+  icon: resources/icon.png
+  maintainer: shanto <salaffoodbd@gmail.com>
+  synopsis: Break reminders for long desk sessions
+  description: >
+    Breakwise reminds you to rest. A small card slides into a corner of the
+    screen for a 20-20-20 eye break every 20 minutes, and a longer body break
+    every hour. It closes itself when the break is over.
+  # A flat name->value map. Nesting these under `entry:` emits a literal
+  # `entry=[object Object]` line, which desktop-file-validate rejects.
+  desktop:
+    Name: Breakwise
+    Comment: Break reminders for long desk sessions
+    Categories: Utility;Productivity;
+    Keywords: break;timer;pomodoro;health;eyes;
+    # Must match the window's actual WM_CLASS (lowercase), or GNOME cannot
+    # associate the window with the launcher icon.
+    StartupWMClass: breakwise
+
+deb:
+  # Forces the SUID sandbox helper to 4755; see the script for why the
+  # generated default is not enough on Ubuntu 24.04.
+  afterInstall: build/deb-postinstall.sh
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    - libdrm2
+    - libgbm1
+
+appImage:
+  artifactName: ${productName}-${version}.${ext}

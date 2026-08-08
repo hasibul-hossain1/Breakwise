@@ -1,0 +1,160 @@
+/* The overlay card. The window is 380x136; the 10px inset leaves room for the
+   drop shadow, which would otherwise be clipped by the window edge. */
+
+.card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: calc(100% - 20px);
+  margin: 10px;
+  padding: 0 18px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(255, 255, 255, 0.07), transparent 60%),
+    linear-gradient(160deg, #1c1c24 0%, #121218 100%);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.35);
+  animation: card-enter 420ms var(--ease-out) both;
+}
+
+.card.leaving {
+  animation: card-leave 300ms ease-in both;
+}
+
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes card-leave {
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+/* Accent per break kind — drives the ring, the label and the edge glow. */
+.card.kind-eye {
+  --accent: var(--eye);
+}
+.card.kind-body {
+  --accent: var(--body);
+}
+
+.card::before {
+  /* A thin accent bloom along the left edge. */
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 18%, transparent), transparent 42%);
+  pointer-events: none;
+}
+
+/* --- progress ring ------------------------------------------------------ */
+
+.ring {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+
+.ring svg {
+  display: block;
+}
+
+.ring-track {
+  stroke: rgba(255, 255, 255, 0.1);
+}
+
+.ring-progress {
+  stroke: var(--accent);
+  transition: stroke-dashoffset 120ms linear;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 55%, transparent));
+}
+
+.ring-label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.readout {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* "4:59" needs to be smaller than "20" to fit inside the same ring. */
+.readout-compact {
+  font-size: 15px;
+}
+
+/* --- copy --------------------------------------------------------------- */
+
+.copy {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.label {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  margin-bottom: 5px;
+}
+
+.headline {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.detail {
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+/* --- skip --------------------------------------------------------------- */
+
+.skip {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 9px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-faint);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  transition:
+    color 140ms ease,
+    background 140ms ease,
+    border-color 140ms ease;
+}
+
+.skip:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-strong);
+}

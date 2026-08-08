@@ -1,0 +1,79 @@
+:root {
+  /* Surfaces */
+  --bg: #0d0d10;
+  --surface: #17171c;
+  --surface-raised: #1e1e25;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  /* Text */
+  --text: #f4f4f5;
+  --text-muted: rgba(244, 244, 245, 0.62);
+  --text-faint: rgba(244, 244, 245, 0.38);
+
+  /* Accents — one per break kind, used across overlay and settings */
+  --eye: #38bdf8;
+  --body: #a78bfa;
+  --danger: #f87171;
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
+
+  --font: 'Ubuntu', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* The overlay window is transparent — its body must not paint a background. */
+body.overlay-body {
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  cursor: default;
+}
+
+#root {
+  height: 100%;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--eye);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
