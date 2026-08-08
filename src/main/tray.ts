@@ -16,21 +16,12 @@ function iconPath(file: string): string {
     : join(__dirname, '../../resources', file)
 }
 
-/** Second-resolution, for the tooltip — updating it never redraws the menu. */
-function countdown(ms: number | null): string {
-  if (ms === null) return 'off'
-  const total = Math.max(0, Math.round(ms / 1000))
-  const minutes = Math.floor(total / 60)
-  const seconds = total % 60
-  return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
-}
-
 /**
- * Minute-resolution, for the menu labels.
+ * Minute-resolution labels for the whole tray item.
  *
- * Rebuilding the context menu while it is open makes it visibly flicker, and
- * a second-resolution label forced a rebuild every single second. At minute
- * resolution the menu is rebuilt ~60x less often.
+ * Second resolution meant the tray had to be rewritten every second, which
+ * GNOME renders as the icon and any open menu shaking. Nothing here needs to
+ * be that precise.
  */
 function coarseCountdown(ms: number | null): string {
   if (ms === null) return 'off'
@@ -55,19 +46,23 @@ export class AppTray {
   }
 
   update(status: StatusPayload): void {
-    // The tooltip is cheap to update and does not touch the menu, so it keeps
-    // second resolution.
-    this.tray.setToolTip(
-      status.paused
-        ? 'Breakwise — paused'
-        : `Breakwise — eyes ${countdown(status.nextEyeMs)}, body ${countdown(status.nextBodyMs)}`
-    )
-
     const eye = coarseCountdown(status.nextEyeMs)
     const body = coarseCountdown(status.nextBodyMs)
     const signature = `${status.paused}|${status.breakActive}|${eye}|${body}`
+
+    // Bail before touching the tray at all when nothing visible changed.
+    //
+    // Every setToolTip/setContextMenu call is a D-Bus property write on the
+    // StatusNotifierItem, and GNOME's AppIndicator extension redraws the icon
+    // on each one. The scheduler emits status once a second, so writing on
+    // every emit made the icon visibly shake in the top bar. At minute
+    // resolution the tray is touched roughly once a minute.
     if (signature === this.signature) return
     this.signature = signature
+
+    this.tray.setToolTip(
+      status.paused ? 'Breakwise — paused' : `Breakwise — eyes ${eye}, body ${body}`
+    )
 
     const menu = Menu.buildFromTemplate([
       {
