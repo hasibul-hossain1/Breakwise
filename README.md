@@ -17,28 +17,90 @@ long break already rests your eyes).
 ![The body break card](shots/break-body.png)
 ![Settings](shots/settings.png)
 
-## Requirements
+## Install
 
-- Ubuntu 24.04 (GNOME). Built and verified on Wayland with XWayland.
-- Node.js 20+ for development. Nothing extra to run a packaged build.
+There are no prebuilt downloads — you build it yourself. It is four commands
+and takes a couple of minutes.
 
-The tray icon needs the **Ubuntu AppIndicators** GNOME extension, which ships
-enabled on Ubuntu by default.
+### What you need
+
+- A Debian-based distro (Ubuntu, Mint, Pop!_OS, Zorin). Built and verified on
+  Ubuntu 24.04 with GNOME on Wayland.
+- **Node.js 20 or newer**, and npm.
+- `git`.
+- An internet connection for the first build — it downloads Electron, which is
+  around 100 MB.
+
+Check what you have:
+
+```bash
+node --version && npm --version && git --version
+```
+
+If Node is missing or older than 20, the [NodeSource packages](https://github.com/nodesource/distributions)
+or [nvm](https://github.com/nvm-sh/nvm) are the usual ways to get a current one.
+Ubuntu's own `nodejs` package is often too old.
+
+### Build and install
+
+```bash
+git clone https://github.com/hasibul-hossain1/Breakwise.git
+```
+
+```bash
+cd Breakwise && npm install
+```
+
+```bash
+npm run dist:deb
+```
+
+```bash
+sudo apt install ./dist/breakwise_1.0.0_amd64.deb
+```
+
+Now open **Breakwise** from your app menu. The settings window appears, and the
+countdown starts. Turn on **Start with my session** if you want it running
+after every login.
+
+The `./` in that last command matters — without it apt looks for a package by
+that name in its repositories and tells you it does not exist.
+
+### Not on a Debian-based distro?
+
+Build an AppImage instead:
+
+```bash
+npm run dist:appimage
+```
+
+```bash
+chmod +x dist/Breakwise-1.0.0.AppImage && ./dist/Breakwise-1.0.0.AppImage
+```
+
+No install step — the file *is* the app. It does need `libfuse2`, which Ubuntu
+22.04 and newer do not ship by default; if you see an error mentioning
+`libfuse.so.2`, run `sudo apt install libfuse2t64`.
+
+### Uninstalling
+
+```bash
+sudo apt remove breakwise
+```
+
+Your settings live in `~/.config/breakwise/` and are left behind; delete that
+directory too if you want a clean slate.
 
 ## Development
 
 ```bash
-npm install
-```
-
-```bash
-npm run dev
+npm install && npm run dev
 ```
 
 `npm run dev` starts Vite with hot reload for the React UI — edit anything in
 `src/renderer` and the window updates without restarting Electron.
 
-Useful checks:
+Before opening a PR:
 
 ```bash
 npm run typecheck
@@ -48,23 +110,12 @@ npm run typecheck
 npm run build
 ```
 
-## Packaging
+The build ends with a verification step that fails if any output file is empty.
+See the note at the bottom of this file for why that exists.
 
-```bash
-npm run dist:deb
-```
-
-```bash
-npm run dist:appimage
-```
-
-Artifacts land in `dist/`. Install the .deb with:
-
-```bash
-sudo apt install ./dist/breakwise_1.0.0_amd64.deb
-```
-
-The AppImage needs no install — mark it executable and run it.
+The tray icon needs the **Ubuntu AppIndicators** GNOME extension, which ships
+enabled on Ubuntu by default. Without it the app still runs, you just get no
+icon in the top bar.
 
 ## Using it
 
@@ -99,6 +150,37 @@ every login.
 
 Settings are stored at `~/.config/breakwise/config.json`. Editing that file by
 hand is safe: anything invalid falls back to the default.
+
+## Contributing
+
+Contributions are welcome. This started as a personal itch, so plenty of it is
+rough and there is no shortage of things worth improving — the artwork on the
+break cards, the settings layout, more break types, translations, packaging for
+other distros.
+
+The codebase is small: roughly a thousand lines across the main process and the
+React UI, no state management library, no test framework to learn. `npm run dev`
+gives you hot reload, so the loop is fast.
+
+Two things to do before opening a PR:
+
+```bash
+npm run typecheck && npm run build
+```
+
+If you change anything visual, this renders both windows to `shots/` so you can
+check the result without waiting for a real break:
+
+```bash
+npx electron scripts/capture.cjs
+```
+
+Bug reports are just as useful as code. If something misbehaves, the most
+helpful thing you can include is:
+
+```bash
+journalctl --user --since "10 min ago" | grep -i breakwise
+```
 
 ## Project layout
 
