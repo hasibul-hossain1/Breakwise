@@ -73,12 +73,114 @@
   flex: none;
   display: grid;
   place-items: center;
+  /* The artwork is drawn with currentColor so it follows the break accent. */
+  color: var(--accent);
   filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 30%, transparent));
 }
 
-.art svg {
+.figure {
   display: block;
+  width: 100%;
+  height: 100%;
   overflow: visible;
+}
+
+/* Rotations are in user units, so every animated group pivots in viewBox
+   space rather than around its own bounding box. */
+.figure * {
+  transform-box: view-box;
+}
+
+/* --- walking figure ----------------------------------------------------- */
+
+.walk .limb {
+  animation: limb-swing 1.15s ease-in-out infinite;
+}
+
+/* Arms swing wider than the legs; at a small angle they sit on top of the
+   torso line and the figure looks armless. */
+.walk .front-leg {
+  transform-origin: 50px 58px;
+}
+.walk .back-leg {
+  transform-origin: 50px 58px;
+  animation-delay: -0.575s;
+  opacity: 0.5;
+}
+.walk .front-arm {
+  transform-origin: 50px 36px;
+  animation-name: limb-swing-wide;
+  animation-delay: -0.575s;
+}
+.walk .back-arm {
+  transform-origin: 50px 36px;
+  animation-name: limb-swing-wide;
+  opacity: 0.5;
+}
+
+@keyframes limb-swing {
+  0%,
+  100% {
+    transform: rotate(26deg);
+  }
+  50% {
+    transform: rotate(-26deg);
+  }
+}
+
+@keyframes limb-swing-wide {
+  0%,
+  100% {
+    transform: rotate(38deg);
+  }
+  50% {
+    transform: rotate(-38deg);
+  }
+}
+
+/* --- head looking away -------------------------------------------------- */
+
+.look .nose {
+  transform-origin: 34px 50px;
+  animation: gaze 3s ease-in-out infinite;
+}
+
+@keyframes gaze {
+  0%,
+  100% {
+    transform: rotate(30deg);
+  }
+  25%,
+  75% {
+    transform: rotate(-6deg);
+  }
+}
+
+.look .ripple {
+  opacity: 0;
+  animation: ripple-out 3s ease-in-out infinite;
+}
+
+.look .ripple-2 {
+  animation-delay: 0.22s;
+}
+.look .ripple-3 {
+  animation-delay: 0.44s;
+}
+
+@keyframes ripple-out {
+  0%,
+  18% {
+    opacity: 0;
+  }
+  32%,
+  62% {
+    opacity: 1;
+  }
+  80%,
+  100% {
+    opacity: 0;
+  }
 }
 
 /* --- copy --------------------------------------------------------------- */
