@@ -6,7 +6,7 @@
   "author": "shanto",
   "license": "MIT",
   "private": true,
-  "homepage": "https://github.com/shanto/breakwise",
+  "homepage": "https://github.com/hasibul-hossain1/Breakwise",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build && node scripts/verify-build.mjs",
