@@ -16,12 +16,27 @@ function iconPath(file: string): string {
     : join(__dirname, '../../resources', file)
 }
 
+/** Second-resolution, for the tooltip — updating it never redraws the menu. */
 function countdown(ms: number | null): string {
   if (ms === null) return 'off'
   const total = Math.max(0, Math.round(ms / 1000))
   const minutes = Math.floor(total / 60)
   const seconds = total % 60
   return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
+}
+
+/**
+ * Minute-resolution, for the menu labels.
+ *
+ * Rebuilding the context menu while it is open makes it visibly flicker, and
+ * a second-resolution label forced a rebuild every single second. At minute
+ * resolution the menu is rebuilt ~60x less often.
+ */
+function coarseCountdown(ms: number | null): string {
+  if (ms === null) return 'off'
+  const minutes = Math.ceil(Math.max(0, ms) / 60_000)
+  if (minutes <= 1) return 'under a minute'
+  return `${minutes} min`
 }
 
 export class AppTray {
@@ -40,15 +55,19 @@ export class AppTray {
   }
 
   update(status: StatusPayload): void {
-    const eye = countdown(status.nextEyeMs)
-    const body = countdown(status.nextBodyMs)
+    // The tooltip is cheap to update and does not touch the menu, so it keeps
+    // second resolution.
+    this.tray.setToolTip(
+      status.paused
+        ? 'Breakwise — paused'
+        : `Breakwise — eyes ${countdown(status.nextEyeMs)}, body ${countdown(status.nextBodyMs)}`
+    )
+
+    const eye = coarseCountdown(status.nextEyeMs)
+    const body = coarseCountdown(status.nextBodyMs)
     const signature = `${status.paused}|${status.breakActive}|${eye}|${body}`
     if (signature === this.signature) return
     this.signature = signature
-
-    this.tray.setToolTip(
-      status.paused ? 'Breakwise — paused' : `Breakwise — eyes ${eye}, body ${body}`
-    )
 
     const menu = Menu.buildFromTemplate([
       {

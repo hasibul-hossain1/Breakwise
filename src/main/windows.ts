@@ -54,6 +54,13 @@ export function createOverlayWindow(position: Corner): BrowserWindow {
     hasShadow: false,
     alwaysOnTop: true,
     acceptFirstMouse: true,
+    // Without a window type, GNOME treats this as an ordinary application
+    // window that opened without focus (we use showInactive), and its
+    // focus-stealing prevention posts a "Breakwise is ready" entry in the
+    // notification centre every single break. Declaring it a notification
+    // window tells the compositor it is an overlay, not something you were
+    // meant to switch to.
+    type: 'notification',
     webPreferences: {
       preload: PRELOAD,
       contextIsolation: true,
