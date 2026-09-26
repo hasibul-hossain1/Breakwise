@@ -1,7 +1,7 @@
 {
   "name": "breakwise",
   "version": "1.0.0",
-  "description": "A minimal, good-looking break reminder for Ubuntu — 20-20-20 eye breaks and longer body breaks.",
+  "description": "A minimal, good-looking break reminder for Linux, macOS, and Windows — 20-20-20 eye breaks and longer body breaks.",
   "main": "./out/main/index.js",
   "author": "shanto",
   "license": "MIT",
@@ -13,7 +13,10 @@
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "dist:deb": "npm run build && electron-builder --linux deb",
-    "dist:appimage": "npm run build && electron-builder --linux AppImage"
+    "dist:appimage": "npm run build && electron-builder --linux AppImage",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:win": "npm run build && electron-builder --win"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

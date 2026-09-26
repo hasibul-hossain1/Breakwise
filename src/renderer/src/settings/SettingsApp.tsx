@@ -4,6 +4,13 @@ import { CornerPicker } from '../components/CornerPicker'
 import { Stepper } from '../components/Stepper'
 import { Toggle } from '../components/Toggle'
 
+/** What to call the tray icon, in the words of whichever desktop this is. */
+function trayName(platform: string): string {
+  if (platform === 'darwin') return 'the Breakwise icon in the menu bar'
+  if (platform === 'win32') return 'the Breakwise icon in the notification area'
+  return 'the tray icon in the top bar'
+}
+
 function countdown(ms: number | null): string {
   if (ms === null) return 'off'
   const total = Math.max(0, Math.round(ms / 1000))
@@ -264,8 +271,8 @@ export function SettingsApp(): React.JSX.Element | null {
 
         <p className="quit-hint">
           Closing this window keeps the countdown running — reopening it never
-          resets the timer. Use the tray icon in the top bar to pause, restart,
-          or quit Breakwise.
+          resets the timer. Use {trayName(window.breakwise.platform)} to pause,
+          restart, or quit Breakwise.
         </p>
       </main>
     </div>

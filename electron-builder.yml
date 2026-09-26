@@ -11,11 +11,21 @@ files:
   - package.json
 
 # The tray icon is read from disk at runtime, so it must sit outside the asar.
+# Every platform's variant ships in every build — together they are ~20 kB, and
+# a per-platform list here would replace this one rather than merge with it.
 extraResources:
   - from: resources/tray.png
     to: tray.png
   - from: resources/tray@2x.png
     to: tray@2x.png
+  - from: resources/trayTemplate.png
+    to: trayTemplate.png
+  - from: resources/trayTemplate@2x.png
+    to: trayTemplate@2x.png
+  - from: resources/tray.ico
+    to: tray.ico
+  - from: resources/tray-dark.ico
+    to: tray-dark.ico
 
 linux:
   target:
@@ -57,3 +67,44 @@ deb:
 
 appImage:
   artifactName: ${productName}-${version}.${ext}
+
+mac:
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  category: public.app-category.healthcare-fitness
+  # A separate icon: macOS wants the artwork inset in a transparent tile, not
+  # full-bleed like the Linux one, or it sits oversized in the Dock.
+  icon: resources/icon-mac.png
+  darkModeSupport: true
+  extendInfo:
+    # Menu bar app: no Dock tile, no app menu. Without this the Dock icon
+    # appears for the first instant of launch before the app can hide it.
+    LSUIElement: true
+  hardenedRuntime: true
+  gatekeeperAssess: false
+
+dmg:
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
+win:
+  target:
+    - target: nsis
+      arch: [x64, arm64]
+  icon: resources/icon.ico
+
+nsis:
+  # A wizard rather than a one-click install, so the install location and the
+  # shortcuts are the user's call.
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Breakwise
+  # Settings live in %APPDATA%\breakwise; an uninstall is not a reason to throw
+  # away someone's break intervals.
+  deleteAppDataOnUninstall: false
+  artifactName: ${productName}-Setup-${version}-${arch}.${ext}

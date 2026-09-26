@@ -9,6 +9,11 @@ import type { AppConfig, BreakKind, BreakPayload, StatusPayload } from '@shared/
  * processes. Renderers run with contextIsolation on and nodeIntegration off.
  */
 const api = {
+  // --- environment ----------------------------------------------------------
+  // The UI needs it only to name things the way the host OS does — "menu bar"
+  // on macOS, "notification area" on Windows, "top bar" on GNOME.
+  platform: process.platform,
+
   // --- config -------------------------------------------------------------
   getConfig: (): Promise<AppConfig> => ipcRenderer.invoke('config:get'),
   updateConfig: (patch: Partial<AppConfig>): Promise<AppConfig> =>

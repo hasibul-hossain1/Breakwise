@@ -1,6 +1,7 @@
-import { BrowserWindow, screen, shell } from 'electron'
+import { app, BrowserWindow, screen, shell } from 'electron'
 import { join } from 'node:path'
 import type { BreakPayload, Corner } from '@shared/types'
+import { IS_LINUX, IS_MAC } from './platform'
 
 const PRELOAD = join(__dirname, '../preload/index.js')
 const RENDERER_DIR = join(__dirname, '../renderer')
@@ -16,8 +17,43 @@ function loadRenderer(window: BrowserWindow, page: 'break' | 'settings'): void {
 }
 
 /**
+ * The window kind the compositor should treat the overlay as. It is not the
+ * same word on every platform, and passing a foreign one is not ignored
+ * quietly, so each gets its own.
+ *
+ * Linux: without a type, GNOME treats this as an ordinary application window
+ * that opened without focus (we use showInactive), and its focus-stealing
+ * prevention posts a "Breakwise is ready" entry in the notification centre
+ * every single break. 'notification' tells the compositor it is an overlay,
+ * not something you were meant to switch to.
+ *
+ * macOS: 'panel' backs the window with an NSPanel, which can sit above a
+ * fullscreen app and take a click without activating Breakwise and pulling you
+ * out of what you were doing.
+ *
+ * Windows: no equivalent, and none needed — skipTaskbar plus showInactive
+ * already keep it out of the way.
+ */
+const OVERLAY_WINDOW_TYPE = IS_LINUX ? 'notification' : IS_MAC ? 'panel' : undefined
+
+/**
+ * Puts a window on every desktop, including over fullscreen apps.
+ *
+ * skipTransformProcessType matters on macOS: without it this call flips the
+ * process between accessory and regular, which shows and hides the Dock icon
+ * and can steal focus mid-break. Other platforms ignore the option.
+ */
+function setVisibleEverywhere(window: BrowserWindow, visible: boolean): void {
+  window.setVisibleOnAllWorkspaces(visible, {
+    visibleOnFullScreen: visible,
+    skipTransformProcessType: true
+  })
+}
+
+/**
  * Places the overlay in a corner of the display the pointer is on, inside the
- * work area so it never hides under the GNOME top bar or the dock.
+ * work area so it never hides under the GNOME top bar, the macOS menu bar, the
+ * Windows taskbar, or a dock.
  */
 function overlayBounds(position: Corner): { x: number; y: number } {
   const cursor = screen.getCursorScreenPoint()
@@ -54,13 +90,7 @@ export function createOverlayWindow(position: Corner): BrowserWindow {
     hasShadow: false,
     alwaysOnTop: true,
     acceptFirstMouse: true,
-    // Without a window type, GNOME treats this as an ordinary application
-    // window that opened without focus (we use showInactive), and its
-    // focus-stealing prevention posts a "Breakwise is ready" entry in the
-    // notification centre every single break. Declaring it a notification
-    // window tells the compositor it is an overlay, not something you were
-    // meant to switch to.
-    type: 'notification',
+    ...(OVERLAY_WINDOW_TYPE ? { type: OVERLAY_WINDOW_TYPE } : {}),
     webPreferences: {
       preload: PRELOAD,
       contextIsolation: true,
@@ -72,7 +102,7 @@ export function createOverlayWindow(position: Corner): BrowserWindow {
   // 'screen-saver' is the highest normal level — it keeps the card above
   // fullscreen editors and video calls, which is the whole point of a reminder.
   window.setAlwaysOnTop(true, 'screen-saver')
-  window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+  setVisibleEverywhere(window, true)
 
   loadRenderer(window, 'break')
   return window
@@ -101,11 +131,16 @@ export function openSettingsWindow(): BrowserWindow {
     // can be minimised, buried, or sitting on another workspace — so undo all
     // three rather than just calling show().
     if (settingsWindow.isMinimized()) settingsWindow.restore()
-    settingsWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+    setVisibleEverywhere(settingsWindow, true)
     settingsWindow.show()
     settingsWindow.moveTop()
+    // Breakwise runs as an accessory app on macOS (no Dock icon), and an
+    // accessory app is not in the activation order — focusing the window alone
+    // raises it behind whatever is in front. Activating the app first is what
+    // actually brings it forward.
+    if (IS_MAC) app.focus({ steal: true })
     settingsWindow.focus()
-    settingsWindow.setVisibleOnAllWorkspaces(false)
+    setVisibleEverywhere(settingsWindow, false)
     return settingsWindow
   }
 
@@ -127,7 +162,10 @@ export function openSettingsWindow(): BrowserWindow {
     }
   })
 
-  settingsWindow.on('ready-to-show', () => settingsWindow?.show())
+  settingsWindow.on('ready-to-show', () => {
+    settingsWindow?.show()
+    if (IS_MAC) app.focus({ steal: true })
+  })
   settingsWindow.on('closed', () => {
     settingsWindow = null
   })

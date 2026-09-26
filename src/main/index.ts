@@ -3,7 +3,8 @@ import type { AppConfig, BreakKind, StatusPayload } from '@shared/types'
 import { configStore } from './config'
 import { BreakScheduler } from './scheduler'
 import { AppTray } from './tray'
-import { setAutostart } from './autostart'
+import { launchedByAutostart, setAutostart } from './autostart'
+import { IS_MAC } from './platform'
 import {
   createOverlayWindow,
   getSettingsWindow,
@@ -12,17 +13,12 @@ import {
   showOverlay
 } from './windows'
 
-/**
- * Login autostart passes --autostart so the app can come up silently. A launch
- * without it is a person opening the app, and they need to see something:
- * with no tray icon, the settings window is the only sign the app is alive.
- */
-const LAUNCHED_BY_AUTOSTART = process.argv.includes('--autostart')
-
 let overlay: BrowserWindow | null = null
 let scheduler: BreakScheduler | null = null
 let tray: AppTray | null = null
 let quitting = false
+/** See the macOS 'activate' handler below. */
+let swallowLaunchActivation = false
 
 /** Lifecycle tracing, dev builds only — silent once packaged. */
 function debug(...args: unknown[]): void {
@@ -103,7 +99,11 @@ function bootstrap(): void {
   scheduler.start()
   tray.update(scheduler.getStatus())
 
-  if (LAUNCHED_BY_AUTOSTART) {
+  // A login launch comes up silently. A launch without that marker is a person
+  // opening the app, and they need to see something: the settings window is
+  // the only confirmation that the app is now running.
+  if (launchedByAutostart()) {
+    swallowLaunchActivation = IS_MAC
     debug('started silently for autostart; countdown running')
   } else {
     openSettingsWindow()
@@ -123,8 +123,33 @@ if (!app.requestSingleInstanceLock()) {
     debug('second launch: settings raised, countdown untouched', scheduler?.getStatus())
   })
 
+  // macOS routes "open an app that is already running" here rather than to
+  // second-instance — Launch Services activates the live process instead of
+  // starting another one. Without this, double-clicking Breakwise in Finder
+  // while it sits in the menu bar would do nothing at all.
+  //
+  // The launch itself also emits activate, which for a login launch must not
+  // put a window on screen; bootstrap arms the flag to eat exactly that one.
+  app.on('activate', () => {
+    if (swallowLaunchActivation) {
+      swallowLaunchActivation = false
+      debug('ignored the launch activation of a silent start')
+      return
+    }
+    openSettingsWindow()
+  })
+
   app.whenReady().then(() => {
+    // Windows groups taskbar buttons and notifications by this id; without it
+    // a packaged build is filed under "electron.app.Electron".
     app.setAppUserModelId('dev.shanto.breakwise')
+
+    // macOS: run as an accessory app — menu bar item, no Dock icon, no app
+    // menu. This is a background reminder, and a Dock tile whose only job is
+    // to reopen a settings window is noise. The packaged build declares
+    // LSUIElement for the same reason; this covers running from source.
+    if (IS_MAC) app.dock?.hide()
+
     bootstrap()
   })
 }

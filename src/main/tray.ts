@@ -1,6 +1,7 @@
-import { app, Menu, nativeImage, Tray } from 'electron'
-import { join } from 'node:path'
+import { Menu, nativeImage, nativeTheme, Tray, type NativeImage } from 'electron'
+import { execFileSync } from 'node:child_process'
 import type { BreakKind, StatusPayload } from '@shared/types'
+import { IS_MAC, IS_WINDOWS, resourcePath } from './platform'
 
 export interface TrayActions {
   openSettings: () => void
@@ -8,12 +9,6 @@ export interface TrayActions {
   setPaused: (paused: boolean) => void
   restartTimers: () => void
   quit: () => void
-}
-
-function iconPath(file: string): string {
-  return app.isPackaged
-    ? join(process.resourcesPath, file)
-    : join(__dirname, '../../resources', file)
 }
 
 /**
@@ -30,19 +25,77 @@ function coarseCountdown(ms: number | null): string {
   return `${minutes} min`
 }
 
+/**
+ * Whether the Windows taskbar is currently dark, which decides whether the
+ * light or the dark tray mark is legible.
+ *
+ * Windows tracks the taskbar tone separately from the app tone, and Electron
+ * only exposes the app one (`nativeTheme.shouldUseDarkColors`). The two differ
+ * whenever someone picks "Custom" in Settings → Personalisation → Colours, and
+ * getting it wrong means an invisible tray icon — the only handle this app has
+ * — so read the actual value and keep nativeTheme as the fallback.
+ */
+function windowsTaskbarIsDark(): boolean {
+  try {
+    const output = execFileSync(
+      'reg',
+      [
+        'query',
+        'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize',
+        '/v',
+        'SystemUsesLightTheme'
+      ],
+      { encoding: 'utf-8', windowsHide: true, timeout: 2000 }
+    )
+    const value = /SystemUsesLightTheme\s+REG_DWORD\s+0x(\d+)/i.exec(output)
+    if (value) return value[1] === '0'
+  } catch {
+    // Key missing (older builds) or reg.exe unavailable — fall through.
+  }
+  return nativeTheme.shouldUseDarkColors
+}
+
+function trayImage(): NativeImage {
+  if (IS_MAC) {
+    // The @2x variant next to it is picked up automatically. Marking it a
+    // template image lets macOS invert and tint it for the menu bar rather
+    // than pasting a fixed colour onto it.
+    const image = nativeImage.createFromPath(resourcePath('trayTemplate.png'))
+    image.setTemplateImage(true)
+    return image
+  }
+
+  if (IS_WINDOWS) {
+    return nativeImage.createFromPath(
+      resourcePath(windowsTaskbarIsDark() ? 'tray.ico' : 'tray-dark.ico')
+    )
+  }
+
+  return nativeImage.createFromPath(resourcePath('tray.png'))
+}
+
 export class AppTray {
   private tray: Tray
   private actions: TrayActions
   /** Last rendered menu signature, so we only rebuild when labels change. */
   private signature = ''
+  private onThemeChange: (() => void) | null = null
 
   constructor(actions: TrayActions) {
     this.actions = actions
-    this.tray = new Tray(nativeImage.createFromPath(iconPath('tray.png')))
+    this.tray = new Tray(trayImage())
     this.tray.setToolTip('Breakwise')
-    // Ignored by GNOME's AppIndicator (which only opens the menu), but correct
-    // elsewhere and harmless here.
-    this.tray.on('click', () => this.actions.openSettings())
+
+    // On macOS a left click opens the menu, so an openSettings handler here
+    // would fire alongside it. On GNOME the AppIndicator ignores clicks
+    // entirely and only opens the menu; on Windows this is the one that
+    // matters — a left click opens settings, a right click opens the menu.
+    if (!IS_MAC) this.tray.on('click', () => this.actions.openSettings())
+
+    if (IS_WINDOWS) {
+      this.onThemeChange = (): void => this.tray.setImage(trayImage())
+      nativeTheme.on('updated', this.onThemeChange)
+    }
   }
 
   update(status: StatusPayload): void {
@@ -102,6 +155,7 @@ export class AppTray {
   }
 
   destroy(): void {
+    if (this.onThemeChange) nativeTheme.off('updated', this.onThemeChange)
     this.tray.destroy()
   }
 }
